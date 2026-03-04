@@ -25,10 +25,7 @@ const verificarToken = (req, res, next) => {
     next();
 };
 
-/**
- * Middleware para verificar roles específicos
- * @param {Array} rolesPermitidos - Lista de roles permitidos
- */
+
 const verificarRol = (rolesPermitidos) => {
     return (req, res, next) => {
         if (!req.usuario) {
