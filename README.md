@@ -42,16 +42,6 @@ db/
   usuarios.db                  # Base de datos SQLite (generada)
 ```
 
-## Variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto:
-
-```env
-PORT=3000
-JWT_SECRET=clave_secreta_segura
-JWT_EXPIRES_IN=2h
-JWT_ALGORITHM=HS256
-```
 
 ## Inicializar la base de datos
 
