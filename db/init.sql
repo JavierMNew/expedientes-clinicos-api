@@ -1,24 +1,42 @@
-CREATE TABLE IF NOT EXISTS usuarios ( 
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE, 
-    password TEXT NOT NULL, 
-    role TEXT DEFAULT 'cliente' 
-    );
+-- =============================================
+-- Base de Datos: Sistema de Expedientes Clínicos
+-- Seguridad en el Desarrollo de Aplicaciones
+-- =============================================
 
-CREATE TABLE IF NOT EXISTS products (
+-- Tabla de usuarios del sistema (doctores, admin, enfermeros)
+CREATE TABLE IF NOT EXISTS usuarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  price REAL NOT NULL,
-  stock INTEGER NOT NULL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  nombre_completo TEXT NOT NULL,
+  role TEXT DEFAULT 'doctor' CHECK(role IN ('doctor', 'admin', 'enfermero'))
 );
 
-CREATE TABLE IF NOT EXISTS cart (
+-- Tabla de expedientes clínicos (datos del paciente)
+CREATE TABLE IF NOT EXISTS expedientes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  product_id INTEGER NOT NULL,
-  quantity INTEGER NOT NULL,
+  nombre_paciente TEXT NOT NULL,
+  fecha_nacimiento TEXT NOT NULL,
+  sexo TEXT NOT NULL CHECK(sexo IN ('M', 'F')),
+  tipo_sangre TEXT NOT NULL CHECK(tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
+  alergias TEXT DEFAULT 'Ninguna',
+  antecedentes TEXT DEFAULT 'Ninguno',
+  creado_por INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES usuarios(id),
-  FOREIGN KEY (product_id) REFERENCES products(id)
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (creado_por) REFERENCES usuarios(id)
+);
+
+-- Tabla de consultas médicas
+CREATE TABLE IF NOT EXISTS consultas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  expediente_id INTEGER NOT NULL,
+  doctor_id INTEGER NOT NULL,
+  motivo TEXT NOT NULL,
+  diagnostico TEXT NOT NULL,
+  tratamiento TEXT NOT NULL,
+  notas TEXT DEFAULT '',
+  fecha_consulta DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (expediente_id) REFERENCES expedientes(id),
+  FOREIGN KEY (doctor_id) REFERENCES usuarios(id)
 );

@@ -1,10 +1,6 @@
-# API de aprendizaje sobre Seguridad en el Desarrollo de Aplicaciones
+# API de Expedientes Clínicos — Seguridad en el Desarrollo de Aplicaciones
 
-API para gestión de usuarios, productos y carrito de compras, con autenticación JWT y control de roles. Almacena datos en SQLite.
-
-## Giro de la API
-
-La API permite registrar usuarios, iniciar sesión (obteniendo un token JWT), gestionar contraseñas y roles, crear productos y agregar productos a un carrito de compras. Todas las contraseñas se hashean con `bcrypt` y se almacenan de forma segura en SQLite.
+API para gestión de expedientes clínicos y consultas médicas, con autenticación JWT y control de roles. Almacena datos en SQLite. Diseñada para manejar datos de salud extremadamente sensibles.
 
 ## Tecnologías principales
 
@@ -16,16 +12,9 @@ La API permite registrar usuarios, iniciar sesión (obteniendo un token JWT), ge
 - validator (sanitización y validación de datos)
 - dotenv (variables de entorno)
 
-## Dependencias (package.json)
+## Dependencias
 
-- express
-- sqlite3
-- bcrypt
-- jsonwebtoken
-- validator
-- dotenv
-
-Instalación de dependencias:
+Instalación:
 
 ```bash
 npm install
@@ -35,50 +24,36 @@ npm install
 
 ```
 src/
-  server.js                  # Punto de entrada: configura Express y monta las rutas
+  server.js                    # Punto de entrada: configura Express y monta las rutas
   config/
-    database.js              # Conexión centralizada a SQLite
+    database.js                # Conexión centralizada a SQLite
   constants/
-    config.js                # Variables de entorno (JWT_SECRET, PORT, etc.)
+    config.js                  # Variables de entorno (JWT_SECRET, PORT, etc.)
   middleware/
-    auth.js                  # Middlewares: verificarToken, verificarRol
+    auth.js                    # Middlewares: verificarToken, verificarRol
   utils/
-    generateToken.js         # Generación y verificación de tokens JWT
+    generateToken.js           # Generación y verificación de tokens JWT
   routes/
-    auth.routes.js           # Rutas de autenticación y usuarios
-    product.routes.js        # Rutas de productos
-    cart.routes.js           # Rutas del carrito de compras
+    auth.routes.js             # Rutas de autenticación y usuarios
+    expediente.routes.js       # Rutas de expedientes clínicos
+    consulta.routes.js         # Rutas de consultas médicas
 db/
-  init.sql                   # Script SQL para inicializar las tablas
-  usuarios.db                # Base de datos SQLite (generada)
+  init.sql                     # Script SQL para inicializar las tablas
+  usuarios.db                  # Base de datos SQLite (generada)
 ```
-
-## Reglas y comportamiento relevante
-
-- El archivo de base de datos utilizado es `db/usuarios.db` (SQLite, sin servidor).
-- La conexión a la BD está centralizada en `src/config/database.js` y es reutilizada por todas las rutas.
-- Se usan `db.get()` para consultas que devuelven una fila y `db.run()` para `INSERT`, `UPDATE`, `DELETE`.
-- Las consultas están parametrizadas (placeholders `?`) para prevenir SQL injection.
-- La validación de contraseña en el servidor exige una longitud estricta: debe cumplir 8 < password < 10 (es decir, longitud válida = 9 caracteres).
-- `bcrypt` se usa con `saltRounds = 10` para generar el hash almacenado.
-- La autenticación se realiza mediante tokens JWT enviados en el header `Authorization: Bearer <token>`.
-- El sistema de roles soporta: `cliente` (por defecto), `admin`, `moderador`, `limpiapiso`.
-- Las rutas están organizadas con Express Router en archivos separados para mantener `server.js` limpio.
 
 ## Variables de entorno
 
-Crear un archivo `.env` en la raíz del proyecto con las siguientes variables:
+Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
-PORT= (Puerto de preferencia)
-JWT_SECRET= (Ingresar la llave secreta)
-JWT_EXPIRES_IN= (Ingresar las horas necesarias)
-JWT_ALGORITHM= (Usualmente HS256)
+PORT=3000
+JWT_SECRET=clave_secreta_segura
+JWT_EXPIRES_IN=2h
+JWT_ALGORITHM=HS256
 ```
 
 ## Inicializar la base de datos
-
-Hay un script SQL en `db/init.sql` que crea las tablas necesarias. Puedes inicializar la base de datos con:
 
 ```bash
 sqlite3 db/usuarios.db < db/init.sql
@@ -89,39 +64,47 @@ Esquema de la base de datos:
 ```sql
 CREATE TABLE IF NOT EXISTS usuarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
+  email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
-  role TEXT DEFAULT 'cliente'
+  nombre_completo TEXT NOT NULL,
+  role TEXT DEFAULT 'doctor' CHECK(role IN ('doctor', 'admin', 'enfermero'))
 );
 
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE IF NOT EXISTS expedientes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  price REAL NOT NULL,
-  stock INTEGER NOT NULL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS cart (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  product_id INTEGER NOT NULL,
-  quantity INTEGER NOT NULL,
+  nombre_paciente TEXT NOT NULL,
+  fecha_nacimiento TEXT NOT NULL,
+  sexo TEXT NOT NULL CHECK(sexo IN ('M', 'F')),
+  tipo_sangre TEXT NOT NULL CHECK(tipo_sangre IN ('A+','A-','B+','B-','AB+','AB-','O+','O-')),
+  alergias TEXT DEFAULT 'Ninguna',
+  antecedentes TEXT DEFAULT 'Ninguno',
+  creado_por INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES usuarios(id),
-  FOREIGN KEY (product_id) REFERENCES products(id)
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (creado_por) REFERENCES usuarios(id)
+);
+
+CREATE TABLE IF NOT EXISTS consultas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  expediente_id INTEGER NOT NULL,
+  doctor_id INTEGER NOT NULL,
+  motivo TEXT NOT NULL,
+  diagnostico TEXT NOT NULL,
+  tratamiento TEXT NOT NULL,
+  notas TEXT DEFAULT '',
+  fecha_consulta DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (expediente_id) REFERENCES expedientes(id),
+  FOREIGN KEY (doctor_id) REFERENCES usuarios(id)
 );
 ```
 
 ## Ejecutar la API
 
-Iniciar el servidor:
-
 ```bash
 node src/server.js
 ```
 
-O en modo desarrollo con recarga automática:
+O en modo desarrollo:
 
 ```bash
 npm run dev
@@ -133,29 +116,35 @@ El servidor escucha por defecto en `http://localhost:3000`.
 
 ## Endpoints
 
-### Autenticación y usuarios (`auth.routes.js`)
+### Autenticación y usuarios (`/api/usuarios`)
 
-#### `POST /registro`
+#### `POST /api/usuarios/registro`
 
-Registra un nuevo usuario.
+Registra un nuevo usuario del sistema.
 
 - Payload:
 
 ```json
 {
-  "email": "usuario@ejemplo.com",
-  "password": "123456789"
+  "email": "doctor@hospital.com",
+  "password": "SecurePass123",
+  "nombre_completo": "Dr. Juan Pérez"
 }
 ```
 
+- Validaciones:
+  - Email: Formato válido (validator.isEmail)
+  - Contraseña: Mínimo 8 caracteres
+  - Nombre completo: 2-150 caracteres, sanitizado con `validator.escape`
+- Contraseña se almacena como hash bcrypt (saltRounds = 10)
 - Respuestas:
-  - `201` — Usuario registrado exitosamente.
-  - `400` — Credenciales inválidas (faltan datos o la contraseña no tiene 9 caracteres).
-  - `409` — El usuario ya existe.
+  - `201` — Usuario registrado exitosamente
+  - `400` — Datos inválidos
+  - `409` — El usuario ya existe
 
 ---
 
-#### `POST /login`
+#### `POST /api/usuarios/login`
 
 Inicia sesión y retorna un token JWT.
 
@@ -163,118 +152,143 @@ Inicia sesión y retorna un token JWT.
 
 ```json
 {
-  "email": "usuario@ejemplo.com",
-  "password": "123456789"
+  "email": "doctor@hospital.com",
+  "password": "SecurePass123"
 }
 ```
 
+- El JWT contiene SOLO: `id`, `email`, `role` (sin contraseñas ni datos sensibles)
 - Respuestas:
-  - `200` — Inicio de sesión exitoso. Retorna `token` y datos del usuario (`id`, `email`, `role`).
-  - `400` — Credenciales inválidas (faltan datos).
-  - `404` — Usuario no encontrado.
-  - `401` — Contraseña incorrecta.
+  - `200` — Login exitoso. Retorna `token` y datos del usuario
+  - `400` — Credenciales inválidas
+  - `404` — Usuario no encontrado
+  - `401` — Contraseña incorrecta
 
 ---
 
-#### `POST /cambiar-password`
+#### `POST /api/usuarios/cambiar-password`
 
-Cambia la contraseña del usuario autenticado. **Requiere token JWT.**
+Cambia la contraseña del usuario autenticado. **Requiere JWT.**
 
 - Headers: `Authorization: Bearer <token>`
 - Payload:
 
 ```json
 {
-  "email": "usuario@ejemplo.com",
-  "nuevaPassword": "987654321"
+  "email": "doctor@hospital.com",
+  "nuevaPassword": "NuevaPass456"
 }
 ```
 
-- Respuestas:
-  - `200` — Contraseña actualizada exitosamente.
-  - `400` — Datos faltantes o contraseña no cumple la longitud requerida (9 caracteres).
-  - `403` — Intento de cambiar la contraseña de otro usuario.
-  - `404` — Usuario no encontrado.
+---
+
+#### `PUT /api/usuarios/cambiar-rol`
+
+Cambia el rol de un usuario. **Requiere JWT + rol admin.**
+
+- Roles válidos: `doctor`, `admin`, `enfermero`
 
 ---
 
-#### `PUT /cambiar-rol`
+### Expedientes Clínicos (`/api/expedientes`)
 
-Cambia el rol de un usuario. **Requiere token JWT y rol `admin`.**
+#### `POST /api/expedientes/crear`
+
+Crea un nuevo expediente clínico. **Requiere JWT + rol doctor o admin.**
 
 - Headers: `Authorization: Bearer <token>`
 - Payload:
 
 ```json
 {
-  "email": "usuario@ejemplo.com",
-  "nuevoRol": "moderador"
+  "nombre_paciente": "María García López",
+  "fecha_nacimiento": "1990-05-15",
+  "sexo": "F",
+  "tipo_sangre": "O+",
+  "alergias": "Penicilina",
+  "antecedentes": "Diabetes tipo 2"
 }
 ```
 
-- Roles válidos: `cliente`, `admin`, `moderador`, `limpiapiso`.
+- Validaciones:
+  - nombre_paciente: 2-150 caracteres, sanitizado con `validator.escape`
+  - fecha_nacimiento: Formato YYYY-MM-DD
+  - sexo: M o F
+  - tipo_sangre: A+, A-, B+, B-, AB+, AB-, O+, O-
+  - alergias/antecedentes: Opcionales, sanitizados
+  - **Anti-SQLi**: Consultas parametrizadas (?)
 - Respuestas:
-  - `200` — Rol actualizado exitosamente. Retorna rol anterior y nuevo.
-  - `400` — Datos faltantes o rol no válido.
-  - `403` — Permisos insuficientes (no eres admin).
-  - `404` — Usuario no encontrado.
+  - `201` — Expediente creado exitosamente
+  - `400` — Datos inválidos
+  - `401/403` — No autenticado / Sin permisos
 
 ---
 
-### Productos (`product.routes.js`)
+#### `GET /api/expedientes/buscar/:id`
 
-#### `POST /product/crear`
+Busca un expediente por ID. **Requiere JWT.**
 
-Crea un nuevo producto.
+- Respuestas:
+  - `200` — Expediente encontrado
+  - `400` — ID inválido
+  - `404` — Expediente no encontrado
 
+---
+
+### Consultas Médicas (`/api/consultas`)
+
+#### `POST /api/consultas/crear`
+
+Registra una nueva consulta médica. **Requiere JWT + rol doctor o admin.**
+
+- Headers: `Authorization: Bearer <token>`
 - Payload:
 
 ```json
 {
-  "name": "Teclado mecánico",
-  "price": 1299.99,
-  "stock": 50
+  "expediente_id": 1,
+  "motivo": "Dolor de cabeza persistente",
+  "diagnostico": "Migraña tensional",
+  "tratamiento": "Ibuprofeno 400mg cada 8 horas por 5 días",
+  "notas": "Paciente refiere estrés laboral"
 }
 ```
 
-- Validaciones: nombre (string, 1-100 chars, sanitizado con `validator.escape`), precio (número > 0), stock (entero >= 0).
+- Validaciones:
+  - expediente_id: Entero positivo, verificado contra BD
+  - motivo: 3-500 caracteres, sanitizado
+  - diagnostico: 3-1000 caracteres, sanitizado
+  - tratamiento: 3-1000 caracteres, sanitizado
+  - notas: Opcional, sanitizado
+  - **Anti-SQLi**: Consultas parametrizadas (?)
 - Respuestas:
-  - `201` — Producto creado correctamente.
-  - `400` — Datos inválidos (nombre, precio o stock).
+  - `201` — Consulta registrada exitosamente
+  - `400` — Datos inválidos
+  - `404` — Expediente no encontrado
+  - `401/403` — No autenticado / Sin permisos
 
 ---
 
-### Carrito (`cart.routes.js`)
+#### `GET /api/consultas/buscar/:expediente_id`
 
-#### `POST /cart/agregar`
+Lista todas las consultas de un expediente. **Requiere JWT.**
 
-Agrega un producto al carrito de un usuario.
-
-- Payload:
-
-```json
-{
-  "user_id": 1,
-  "product_id": 2,
-  "quantity": 3
-}
-```
-
-- Validaciones: `user_id`, `product_id` y `quantity` deben ser enteros positivos. Verifica existencia del usuario y producto, y disponibilidad de stock.
 - Respuestas:
-  - `201` — Producto agregado al carrito.
-  - `400` — Datos inválidos o stock insuficiente.
-  - `404` — Usuario o producto no encontrado.
+  - `200` — Lista de consultas
+  - `400` — ID inválido
+  - `404` — Expediente no encontrado
 
 ---
 
-## Notas de seguridad y operación
+## Controles de Seguridad Implementados
 
-- Las contraseñas nunca se almacenan en texto plano: solo se guarda el hash generado por `bcrypt`.
-- Las consultas parametrizadas evitan inyección SQL.
-- La autenticación se maneja con JWT. Los tokens incluyen `id`, `email` y `role` del usuario.
-- El middleware `verificarToken` valida el token en rutas protegidas.
-- El middleware `verificarRol` restringe el acceso según el rol del usuario autenticado.
-- Los nombres de productos se sanitizan con `validator.escape()` para prevenir XSS.
-- Las rutas están modularizadas con Express Router, manteniendo `server.js` limpio y enfocado en configuración.
-
+| Control | Implementación |
+|---------|----------------|
+| **Hashing de contraseñas** | bcrypt con saltRounds = 10 |
+| **Autenticación** | JWT firmado con clave secreta (HS256) |
+| **Payload JWT seguro** | Solo contiene id, email, role (sin contraseñas) |
+| **Anti-SQL Injection** | Consultas parametrizadas con placeholders `?` |
+| **Anti-XSS** | `validator.escape()` en todos los inputs de texto |
+| **Validación de inputs** | Tipos, rangos, formatos validados estrictamente |
+| **Control de acceso por roles** | Middleware `verificarRol` para doctor, admin, enfermero |
+| **Variables de entorno** | Claves sensibles en `.env` (no hardcoded) |

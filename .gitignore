@@ -9,6 +9,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Base de datos SQLite (no subir datos)
+db/*.db
+
 # Archivos del sistema
 .DS_Store
 Thumbs.db
