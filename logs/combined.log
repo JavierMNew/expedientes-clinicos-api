@@ -1,0 +1,4 @@
+[2026-03-16 19:47:13] INFO: Servidor corriendo en http://localhost:3000 
+[2026-03-16 19:47:13] INFO: Conectado a la base de datos SQLite 
+[2026-03-16 19:47:13] INFO: Tablas inicializadas correctamente 
+[2026-03-16 19:47:29] INFO: [GET] / - status: 200 - 3ms 

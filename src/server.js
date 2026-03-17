@@ -6,10 +6,17 @@ const authRoutes = require("./routes/auth.routes");
 const expedienteRoutes = require("./routes/expediente.routes");
 const consultaRoutes = require("./routes/consulta.routes");
 
+// Importar utilidades de logging
+const logger = require("./utils/logger");
+const requestLogger = require("./middlewares/requestLogger");
+
 const app = express();
 
 // Middleware para parsear JSON
 app.use(express.json());
+
+// Middleware para registrar todas las peticiones
+app.use(requestLogger);
 
 // Registrar rutas bajo /api/
 app.use("/api/usuarios", authRoutes);
@@ -34,5 +41,5 @@ app.get("/", (req, res) => {
 
 // Iniciar el servidor
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  logger.info(`Servidor corriendo en http://localhost:${PORT}`);
 });

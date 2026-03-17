@@ -2,6 +2,7 @@ const express = require("express");
 const validator = require("validator");
 const db = require("../config/database");
 const { verificarToken, verificarRol } = require("../middleware/auth");
+const logger = require("../utils/logger");
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
 
     // Validar nombre del paciente
     if (!nombre_paciente || typeof nombre_paciente !== "string") {
+      logger.warn(`Intento de crear expediente sin nombre de paciente válido por usuario ${req.usuario.email}`);
       return res.status(400).json({ error: "El nombre del paciente es requerido" });
     }
 
@@ -39,6 +41,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
     // Validar tipo de sangre
     const tiposSangre = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
     if (!tipo_sangre || !tiposSangre.includes(tipo_sangre)) {
+      logger.warn(`Tipo de sangre inválido: ${tipo_sangre} - proporcionado por ${req.usuario.email}`);
       return res.status(400).json({
         error: "Tipo de sangre inválido",
         tiposPermitidos: tiposSangre,
@@ -74,6 +77,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
       });
     });
 
+    logger.info(`Expediente clínico creado exitosamente (ID: ${result.id}) por ${req.usuario.email}`);
     res.status(201).json({
       message: "Expediente clínico creado exitosamente",
       expediente: {
@@ -88,7 +92,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
       },
     });
   } catch (error) {
-    console.error("Error al crear expediente:", error);
+    logger.error("Error al crear expediente:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -103,6 +107,7 @@ router.get("/buscar/:id", verificarToken, async (req, res) => {
 
     // Validar que el ID sea un entero positivo
     if (!Number.isInteger(id) || id <= 0) {
+      logger.warn(`Intento de buscar expediente con ID inválido (${id}) por ${req.usuario.email}`);
       return res.status(400).json({ error: "ID de expediente inválido" });
     }
 
@@ -119,6 +124,7 @@ router.get("/buscar/:id", verificarToken, async (req, res) => {
     });
 
     if (!expediente) {
+      logger.info(`Búsqueda de expediente no encontrado (ID: ${id}) por ${req.usuario.email}`);
       return res.status(404).json({ error: "Expediente no encontrado" });
     }
 
@@ -127,7 +133,7 @@ router.get("/buscar/:id", verificarToken, async (req, res) => {
       expediente,
     });
   } catch (error) {
-    console.error("Error al buscar expediente:", error);
+    logger.error("Error al buscar expediente:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });

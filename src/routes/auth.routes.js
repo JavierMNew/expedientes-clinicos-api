@@ -4,6 +4,7 @@ const validator = require("validator");
 const db = require("../config/database");
 const { generateToken } = require("../utils/generateToken");
 const { verificarToken, verificarRol } = require("../middleware/auth");
+const logger = require("../utils/logger");
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.post("/registro", async (req, res) => {
 
     // Validar que los datos existan
     if (!email || !password || !nombre_completo) {
+      logger.warn(`Intento de registro con campos faltantes (IP: ${req.ip || 'desconocida'})`);
       return res.status(400).json({ error: "Todos los campos son requeridos (email, password, nombre_completo)" });
     }
 
@@ -47,6 +49,7 @@ router.post("/registro", async (req, res) => {
     });
 
     if (usuarioExistente) {
+      logger.warn(`Intento de registro con email ya existente: ${email}`);
       return res.status(409).json({ error: "El usuario ya existe" });
     }
 
@@ -69,12 +72,13 @@ router.post("/registro", async (req, res) => {
       );
     });
 
+    logger.info(`Nuevo usuario registrado exitosamente: ${email} (${nombreSanitizado})`);
     res.status(201).json({
       message: "Usuario registrado exitosamente",
       user: { email, nombre_completo: nombreSanitizado, role: "doctor" },
     });
   } catch (error) {
-    console.error("Error en el registro:", error);
+    logger.error("Error en el registro:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -89,6 +93,7 @@ router.post("/login", async (req, res) => {
 
     // Validar que los datos existan
     if (!email || !password) {
+      logger.warn(`Intento de login con campos faltantes (IP: ${req.ip || 'desconocida'})`);
       return res.status(400).json({ error: "Credenciales inválidas" });
     }
 
@@ -105,18 +110,21 @@ router.post("/login", async (req, res) => {
     });
 
     if (!usuario) {
+      logger.warn(`Intento de login con email no registrado: ${email}`);
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
     // Comparar la contraseña ingresada con el hash almacenado (bcrypt)
     const passwordValida = await bcrypt.compare(password, usuario.password);
     if (!passwordValida) {
+      logger.warn(`Intento de login con contraseña incorrecta para usuario: ${email}`);
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
     // Generar el token con JWT (payload solo contiene id, email, role - NO contraseña)
     const token = generateToken(usuario);
 
+    logger.info(`Inicio de sesión exitoso para usuario: ${email}`);
     res.status(200).json({
       message: "Inicio de sesión exitoso",
       token: token,
@@ -128,7 +136,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en el login:", error);
+    logger.error("Error en el login:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -143,6 +151,7 @@ router.post("/cambiar-password", verificarToken, async (req, res) => {
 
     // Validar que el email del token coincida con el de la petición
     if (email !== req.usuario.email) {
+      logger.warn(`Usuario ${req.usuario.email} intentó cambiar la contraseña de otro usuario: ${email}`);
       return res
         .status(403)
         .json({ error: "No puedes cambiar la contraseña de otro usuario" });
@@ -194,12 +203,13 @@ router.post("/cambiar-password", verificarToken, async (req, res) => {
       );
     });
 
+    logger.info(`Usuario ${email} cambió su contraseña exitosamente`);
     res.status(200).json({
       message: "Contraseña actualizada exitosamente",
       user: { email },
     });
   } catch (error) {
-    console.error("Error al cambiar contraseña:", error);
+    logger.error("Error al cambiar contraseña:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -258,6 +268,7 @@ router.put("/cambiar-rol", verificarToken, verificarRol(["admin"]), async (req, 
       );
     });
 
+    logger.info(`Administrador ${req.usuario.email} cambió el rol del usuario ${email} de ${rolAnterior} a ${nuevoRol}`);
     res.status(200).json({
       message: "Rol actualizado exitosamente",
       user: {
@@ -267,7 +278,7 @@ router.put("/cambiar-rol", verificarToken, verificarRol(["admin"]), async (req, 
       },
     });
   } catch (error) {
-    console.error("Error al cambiar rol:", error);
+    logger.error("Error al cambiar rol:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 },

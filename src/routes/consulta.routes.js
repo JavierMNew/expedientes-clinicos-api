@@ -2,6 +2,7 @@ const express = require("express");
 const validator = require("validator");
 const db = require("../config/database");
 const { verificarToken, verificarRol } = require("../middleware/auth");
+const logger = require("../utils/logger");
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
 
         // Validar ID de expediente
         if (!Number.isInteger(expediente_id) || expediente_id <= 0) {
+            logger.warn(`Intento de crear consulta con ID de expediente inválido (${expediente_id}) por ${req.usuario.email}`);
             return res.status(400).json({ error: "expediente_id inválido" });
         }
 
@@ -66,6 +68,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
         });
 
         if (!expedienteExiste) {
+            logger.warn(`Intento de crear consulta en expediente inexistente (ID: ${expediente_id}) por ${req.usuario.email}`);
             return res.status(404).json({ error: "Expediente no encontrado" });
         }
 
@@ -85,6 +88,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
             });
         });
 
+        logger.info(`Nueva consulta (ID: ${result.id}) registrada exitosamente en expediente ${expediente_id} por doctor_id ${doctor_id}`);
         res.status(201).json({
             message: "Consulta médica registrada exitosamente",
             consulta: {
@@ -98,7 +102,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
             },
         });
     } catch (error) {
-        console.error("Error al crear consulta:", error);
+        logger.error("Error al crear consulta:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
@@ -113,6 +117,7 @@ router.get("/buscar/:expediente_id", verificarToken, async (req, res) => {
 
         // Validar que el ID sea un entero positivo
         if (!Number.isInteger(expediente_id) || expediente_id <= 0) {
+            logger.warn(`Intento de buscar consultas con ID de expediente inválido (${expediente_id}) por ${req.usuario.email}`);
             return res.status(400).json({ error: "expediente_id inválido" });
         }
 
@@ -129,6 +134,7 @@ router.get("/buscar/:expediente_id", verificarToken, async (req, res) => {
         });
 
         if (!expedienteExiste) {
+            logger.info(`Búsqueda de consultas en expediente no encontrado (ID: ${expediente_id}) por ${req.usuario.email}`);
             return res.status(404).json({ error: "Expediente no encontrado" });
         }
 
@@ -151,7 +157,7 @@ router.get("/buscar/:expediente_id", verificarToken, async (req, res) => {
             consultas,
         });
     } catch (error) {
-        console.error("Error al buscar consultas:", error);
+        logger.error("Error al buscar consultas:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
