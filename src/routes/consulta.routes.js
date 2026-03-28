@@ -14,6 +14,8 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
     try {
         let { expediente_id, motivo, diagnostico, tratamiento, notas } = req.body;
 
+        logger.debug(`Petición de creación de consulta - expediente_id: ${expediente_id || 'no proporcionado'}, doctor: ${req.usuario.email}`);
+
         // Validar ID de expediente
         if (!Number.isInteger(expediente_id) || expediente_id <= 0) {
             logger.warn(`Intento de crear consulta con ID de expediente inválido (${expediente_id}) por ${req.usuario.email}`);
@@ -102,7 +104,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
             },
         });
     } catch (error) {
-        logger.error("Error al crear consulta:", error);
+        logger.error(`Error al crear consulta: ${error.message}`, { stack: error.stack });
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
@@ -114,6 +116,8 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
 router.get("/buscar/:expediente_id", verificarToken, async (req, res) => {
     try {
         const expediente_id = parseInt(req.params.expediente_id);
+
+        logger.debug(`Petición de búsqueda de consultas - expediente_id: ${req.params.expediente_id}, solicitado por: ${req.usuario.email}`);
 
         // Validar que el ID sea un entero positivo
         if (!Number.isInteger(expediente_id) || expediente_id <= 0) {
@@ -157,7 +161,7 @@ router.get("/buscar/:expediente_id", verificarToken, async (req, res) => {
             consultas,
         });
     } catch (error) {
-        logger.error("Error al buscar consultas:", error);
+        logger.error(`Error al buscar consultas: ${error.message}`, { stack: error.stack });
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });

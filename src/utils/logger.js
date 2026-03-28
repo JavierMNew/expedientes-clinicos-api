@@ -1,7 +1,9 @@
 const winston = require('winston');
+const path = require('path');
 
-// Definición de niveles personalizados como solicitaste:
-// rastro (trace), depurar (debug), informacion (info), advertir (warn), error y fatal
+// ---------------------------------------------------------------------------
+// Niveles personalizados de severidad (de mayor a menor criticidad)
+// ---------------------------------------------------------------------------
 const customLevels = {
   levels: {
     fatal: 0,
@@ -21,40 +23,91 @@ const customLevels = {
   }
 };
 
-// Configurar colores de winston para nuestros niveles
 winston.addColors(customLevels.colors);
 
-// Crear el formato de nuestros logs
+// ---------------------------------------------------------------------------
+// Lista de patrones sensibles que NUNCA deben llegar a los logs (OWASP)
+// ---------------------------------------------------------------------------
+const SENSITIVE_KEYS = ['password', 'nuevaPassword', 'token', 'authorization', 'credit_card', 'tarjeta', 'cvv', 'secret'];
+
+/**
+ * Filtra datos sensibles de un mensaje de log.
+ * Si el mensaje contiene alguna clave sensible como valor,
+ * la reemplaza con '***FILTERED***'.
+ */
+const sanitize = (message) => {
+  if (typeof message !== 'string') return message;
+
+  let sanitized = message;
+
+  // Filtrar patrones tipo key=value o "key":"value"
+  SENSITIVE_KEYS.forEach((key) => {
+    // Patrón para JSON: "password":"valor"
+    const jsonPattern = new RegExp(`("${key}"\\s*:\\s*)"[^"]*"`, 'gi');
+    sanitized = sanitized.replace(jsonPattern, `$1"***FILTERED***"`);
+
+    // Patrón para key=valor en texto plano
+    const plainPattern = new RegExp(`(${key}\\s*[=:]\\s*)\\S+`, 'gi');
+    sanitized = sanitized.replace(plainPattern, `$1***FILTERED***`);
+  });
+
+  // Filtrar tokens JWT completos (formato: xxx.xxx.xxx)
+  const jwtPattern = /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
+  sanitized = sanitized.replace(jwtPattern, 'JWT_***FILTERED***');
+
+  return sanitized;
+};
+
+// ---------------------------------------------------------------------------
+// Formato requerido: [Fecha y Hora] | [Nivel de Severidad] | [Mensaje]
+// ---------------------------------------------------------------------------
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    return `[${timestamp}] ${level.toUpperCase()}: ${message} ${
-      Object.keys(meta).length ? JSON.stringify(meta) : ''
-    }`;
+    const sanitizedMessage = sanitize(message);
+    const metaString = Object.keys(meta).length ? ` ${sanitize(JSON.stringify(meta))}` : '';
+    return `[${timestamp}] | ${level.toUpperCase()} | ${sanitizedMessage}${metaString}`;
   })
 );
 
+// ---------------------------------------------------------------------------
+// Formato para consola (con colores)
+// ---------------------------------------------------------------------------
+const consoleFormat = winston.format.combine(
+  winston.format.colorize({ all: true }),
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    const sanitizedMessage = sanitize(message);
+    const metaString = Object.keys(meta).length ? ` ${sanitize(JSON.stringify(meta))}` : '';
+    return `[${timestamp}] | ${level} | ${sanitizedMessage}${metaString}`;
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Ruta absoluta a la carpeta de logs (siempre relativa a la raíz del proyecto)
+// ---------------------------------------------------------------------------
+const logsDir = path.join(__dirname, '../../logs');
+
+// ---------------------------------------------------------------------------
 // Crear y configurar el logger
+// ---------------------------------------------------------------------------
 const logger = winston.createLogger({
   levels: customLevels.levels,
-  level: process.env.LOG_LEVEL || 'info', // Nivel por defecto
+  level: process.env.LOG_LEVEL || 'debug', // En desarrollo mostramos todo
   format: logFormat,
   transports: [
-    // Mostrar en consola con colores
+    // Consola con colores
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize({ all: true }),
-        logFormat
-      )
+      format: consoleFormat
     }),
-    // Guardar errores y fatal en un archivo
-    new winston.transports.File({ 
-      filename: 'logs/error.log', 
-      level: 'error' 
+    // Archivo solo para errores y fatales
+    new winston.transports.File({
+      filename: path.join(logsDir, 'error.log'),
+      level: 'error'
     }),
-    // Guardar todos los logs (hasta el nivel configurado) en otro archivo
-    new winston.transports.File({ 
-      filename: 'logs/combined.log' 
+    // Archivo con TODOS los logs (hasta el nivel configurado)
+    new winston.transports.File({
+      filename: path.join(logsDir, 'combined.log')
     })
   ]
 });

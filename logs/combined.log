@@ -1,4 +1,12 @@
-[2026-03-16 19:47:13] INFO: Servidor corriendo en http://localhost:3000 
-[2026-03-16 19:47:13] INFO: Conectado a la base de datos SQLite 
-[2026-03-16 19:47:13] INFO: Tablas inicializadas correctamente 
-[2026-03-16 19:47:29] INFO: [GET] / - status: 200 - 3ms 
+[2026-03-28 10:14:03] | INFO | Servidor corriendo en http://localhost:3000
+[2026-03-28 10:14:03] | INFO | Conectado a la base de datos SQLite
+[2026-03-28 10:14:03] | INFO | Tablas inicializadas correctamente
+[2026-03-28 10:14:33] | DEBUG | Petición de registro recibida - email: admin@hospital.com, IP: ::1
+[2026-03-28 10:14:33] | INFO | Nuevo usuario registrado exitosamente: admin@hospital.com (Dr. Admin)
+[2026-03-28 10:14:33] | DEBUG | [POST] /api/usuarios/registro - status: 201 - 56ms
+[2026-03-28 10:14:42] | DEBUG | Petición de login recibida - email: admin@hospital.com, IP: ::1
+[2026-03-28 10:14:42] | WARN | Intento de login con contraseña incorrecta para usuario: admin@hospital.com
+[2026-03-28 10:14:42] | WARN | [POST] /api/usuarios/login - status: 401 - 48ms
+[2026-03-28 10:14:52] | DEBUG | Petición de login recibida - email: admin@hospital.com, IP: ::1
+[2026-03-28 10:14:52] | ERROR | Error en el login: secretOrPrivateKey must have a value {"stack":"Error: secretOrPrivateKey must have a value\n    at module.exports [as sign] (C:\\Users\\Development\\Documents\\GitHub\\expedientes-clinicos-api\\node_modules\\jsonwebtoken\\sign.js:111:20)\n    at generateToken (C:\\Users\\Development\\Documents\\GitHub\\expedientes-clinicos-api\\src\\utils\\generateToken.js:15:16)\n    at C:\\Users\\Development\\Documents\\GitHub\\expedientes-clinicos-api\\src\\routes\\auth.routes.js:129:19"}
+[2026-03-28 10:14:52] | ERROR | [POST] /api/usuarios/login - status: 500 - 52ms

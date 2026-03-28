@@ -14,6 +14,8 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
   try {
     let { nombre_paciente, fecha_nacimiento, sexo, tipo_sangre, alergias, antecedentes } = req.body;
 
+    logger.debug(`Petición de creación de expediente - paciente: ${nombre_paciente || 'no proporcionado'}, doctor: ${req.usuario.email}`);
+
     // Validar nombre del paciente
     if (!nombre_paciente || typeof nombre_paciente !== "string") {
       logger.warn(`Intento de crear expediente sin nombre de paciente válido por usuario ${req.usuario.email}`);
@@ -92,7 +94,7 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
       },
     });
   } catch (error) {
-    logger.error("Error al crear expediente:", error);
+    logger.error(`Error al crear expediente: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -104,6 +106,8 @@ router.post("/crear", verificarToken, verificarRol(["doctor", "admin"]), async (
 router.get("/buscar/:id", verificarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
+    logger.debug(`Petición de búsqueda de expediente - ID: ${req.params.id}, solicitado por: ${req.usuario.email}`);
 
     // Validar que el ID sea un entero positivo
     if (!Number.isInteger(id) || id <= 0) {
@@ -133,7 +137,7 @@ router.get("/buscar/:id", verificarToken, async (req, res) => {
       expediente,
     });
   } catch (error) {
-    logger.error("Error al buscar expediente:", error);
+    logger.error(`Error al buscar expediente: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });

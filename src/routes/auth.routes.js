@@ -15,6 +15,8 @@ router.post("/registro", async (req, res) => {
   try {
     const { email, password, nombre_completo } = req.body;
 
+    logger.debug(`Petición de registro recibida - email: ${email || 'no proporcionado'}, IP: ${req.ip || 'desconocida'}`);
+
     // Validar que los datos existan
     if (!email || !password || !nombre_completo) {
       logger.warn(`Intento de registro con campos faltantes (IP: ${req.ip || 'desconocida'})`);
@@ -78,7 +80,7 @@ router.post("/registro", async (req, res) => {
       user: { email, nombre_completo: nombreSanitizado, role: "doctor" },
     });
   } catch (error) {
-    logger.error("Error en el registro:", error);
+    logger.error(`Error en el registro: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -90,6 +92,8 @@ router.post("/registro", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    logger.debug(`Petición de login recibida - email: ${email || 'no proporcionado'}, IP: ${req.ip || 'desconocida'}`);
 
     // Validar que los datos existan
     if (!email || !password) {
@@ -136,7 +140,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error("Error en el login:", error);
+    logger.error(`Error en el login: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -148,6 +152,8 @@ router.post("/login", async (req, res) => {
 router.post("/cambiar-password", verificarToken, async (req, res) => {
   try {
     const { email, nuevaPassword } = req.body;
+
+    logger.debug(`Petición de cambio de contraseña recibida para email: ${email || 'no proporcionado'}`);
 
     // Validar que el email del token coincida con el de la petición
     if (email !== req.usuario.email) {
@@ -209,7 +215,7 @@ router.post("/cambiar-password", verificarToken, async (req, res) => {
       user: { email },
     });
   } catch (error) {
-    logger.error("Error al cambiar contraseña:", error);
+    logger.error(`Error al cambiar contraseña: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
@@ -221,6 +227,8 @@ router.post("/cambiar-password", verificarToken, async (req, res) => {
 router.put("/cambiar-rol", verificarToken, verificarRol(["admin"]), async (req, res) => {
   try {
     const { email, nuevoRol } = req.body;
+
+    logger.debug(`Petición de cambio de rol recibida - email objetivo: ${email || 'no proporcionado'}, nuevo rol: ${nuevoRol || 'no proporcionado'}, solicitado por: ${req.usuario.email}`);
 
     // Validar que los datos existan
     if (!email || !nuevoRol) {
@@ -278,7 +286,7 @@ router.put("/cambiar-rol", verificarToken, verificarRol(["admin"]), async (req, 
       },
     });
   } catch (error) {
-    logger.error("Error al cambiar rol:", error);
+    logger.error(`Error al cambiar rol: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: "Error interno del servidor" });
   }
 },

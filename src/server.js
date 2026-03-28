@@ -5,6 +5,7 @@ const { PORT } = require("./constants/config");
 const authRoutes = require("./routes/auth.routes");
 const expedienteRoutes = require("./routes/expediente.routes");
 const consultaRoutes = require("./routes/consulta.routes");
+const logsRoutes = require("./routes/logs.routes");
 
 // Importar utilidades de logging
 const logger = require("./utils/logger");
@@ -22,6 +23,7 @@ app.use(requestLogger);
 app.use("/api/usuarios", authRoutes);
 app.use("/api/expedientes", expedienteRoutes);
 app.use("/api/consultas", consultaRoutes);
+app.use("/api/logs", logsRoutes);
 
 // Ruta raíz informativa
 app.get("/", (req, res) => {
