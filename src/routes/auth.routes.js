@@ -5,13 +5,23 @@ const db = require("../config/database");
 const { generateToken } = require("../utils/generateToken");
 const { verificarToken, verificarRol } = require("../middleware/auth");
 const logger = require("../utils/logger");
+const rateLimit = require("express-rate-limit");
 
 const router = express.Router();
+
+// Configuración de Rate Limit para Auth (Login/Registro)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // 5 intentos permitidos
+  message: { error: "Demasiados intentos de acceso desde esta IP. Bloqueado por 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ============================================
 // POST /registro - Registro de nuevo usuario del sistema
 // ============================================
-router.post("/registro", async (req, res) => {
+router.post("/registro", authLimiter, async (req, res) => {
   try {
     const { email, password, nombre_completo } = req.body;
 
@@ -89,7 +99,7 @@ router.post("/registro", async (req, res) => {
 // POST /login - Inicio de sesión
 // Retorna JWT firmado (sin contraseñas en el payload)
 // ============================================
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

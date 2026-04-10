@@ -3,8 +3,17 @@ const fs = require('fs');
 const path = require('path');
 const { verificarToken, verificarRol } = require('../middleware/auth');
 const logger = require('../utils/logger');
+const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
+
+const logsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 10, // 10 peticiones permitidas por hora para logs (es admin, pero pesado)
+  message: { error: "Demasiadas peticiones a los logs. Intente más tarde." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const LOGS_DIR = path.join(__dirname, '../../logs');
 
@@ -15,7 +24,7 @@ const LOGS_DIR = path.join(__dirname, '../../logs');
 //   ?file=combined (default) | error
 //   ?lines=100 (últimas N líneas, default: 100)
 // ============================================
-router.get('/ver', verificarToken, verificarRol(['admin']), (req, res) => {
+router.get('/ver', verificarToken, verificarRol(['admin']), logsLimiter, (req, res) => {
   try {
     const allowedFiles = ['combined', 'error'];
     const requestedFile = req.query.file || 'combined';

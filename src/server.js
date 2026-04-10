@@ -10,8 +10,25 @@ const logsRoutes = require("./routes/logs.routes");
 // Importar utilidades de logging
 const logger = require("./utils/logger");
 const requestLogger = require("./middlewares/requestLogger");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
+
+// 1. Seguridad de Encabezados (Fix: Information Exposure X-Powered-By)
+// Helmet oculta X-Powered-By y configura otros headers de seguridad (HSTS, CSP, etc.)
+app.use(helmet());
+
+// 2. Rate Limiting Global (Fix: Allocation of Resources Without Limits)
+// Limita a 100 peticiones cada 15 minutos por IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: "Demasiadas peticiones desde esta IP, intente de nuevo más tarde." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(globalLimiter);
 
 // Middleware para parsear JSON
 app.use(express.json());
